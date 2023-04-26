@@ -1,0 +1,33 @@
+version: "3"
+
+networks:
+  proxy:
+    external: true
+
+services:
+  web:
+    container_name: ${COMPOSE_PROJECT_NAME}-web
+    image: php:${PHP_VERSION:-8.2}-apache
+    restart: ${SERVICE_RESTART:-no}
+    working_dir: /var/www/html
+    volumes:
+      - ${PROJECT_PATH:-./www}:/var/www/html
+    environment:
+      - APACHE_DOCUMENT_ROOT=${APACHE_DOCUMENT_ROOT:-/var/www/html}
+    command: >
+      bash -c '
+        sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT:-/var/www/html}!g" /etc/apache2/sites-available/*.conf &&
+        sed -ri -e "s!/var/www/!${APACHE_DOCUMENT_ROOT:-/var/www/html}!g" /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf &&
+        docker-php-ext-install mysqli pdo pdo_mysql &&
+        apache2-foreground
+      '
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web.entrypoints=${PROJECT_ENTRYPOINTS:-web}
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web.rule=Host(${PROJECT_DOMAINS:-`web.localhost`})
+    networks:
+      - proxy
+    expose:
+      - 80
+      - 443
