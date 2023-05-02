@@ -12,13 +12,17 @@ services:
     working_dir: /var/www/html
     volumes:
       - ${PROJECT_PATH:-./www}:/var/www/html
+      - ./apache2/logs:/var/log/apache2
     environment:
       - APACHE_DOCUMENT_ROOT=${APACHE_DOCUMENT_ROOT:-/var/www/html}
     command: >
       bash -c '
         sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT:-/var/www/html}!g" /etc/apache2/sites-available/*.conf &&
         sed -ri -e "s!/var/www/!${APACHE_DOCUMENT_ROOT:-/var/www/html}!g" /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf &&
-        docker-php-ext-install mysqli pdo pdo_mysql &&
+        curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions &&
+        chmod +x /usr/local/bin/install-php-extensions &&
+        install-php-extensions ${PHP_EXTENSIONS:-mysqli pdo_mysql gd} &&
+        a2enmod rewrite &&
         apache2-foreground
       '
     labels:
