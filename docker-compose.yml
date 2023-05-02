@@ -5,20 +5,20 @@ networks:
     external: true
 
 services:
-  web:
-    container_name: ${COMPOSE_PROJECT_NAME}-web
-    image: php:${PHP_VERSION:-8.2}-apache
+  php-apache:
+    container_name: ${COMPOSE_PROJECT_NAME}-php-apache
+    image: php:${PHP_VERSION:-5.6}-apache
     restart: ${SERVICE_RESTART:-no}
-    working_dir: /var/www/html
+    working_dir: /var/www
     volumes:
-      - ${PROJECT_PATH:-./www}:/var/www/html
+      - ${PROJECT_PATH:-./www}:/var/www
       - ./apache2/logs:/var/log/apache2
     environment:
-      - APACHE_DOCUMENT_ROOT=${APACHE_DOCUMENT_ROOT:-/var/www/html}
+      - APACHE_DOCUMENT_ROOT=${APACHE_DOCUMENT_ROOT:-/var/www}
     command: >
       bash -c '
-        sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT:-/var/www/html}!g" /etc/apache2/sites-available/*.conf &&
-        sed -ri -e "s!/var/www/!${APACHE_DOCUMENT_ROOT:-/var/www/html}!g" /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf &&
+        sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT:-/var/www}!g" /etc/apache2/sites-available/*.conf &&
+        sed -ri -e "s!/var/www/!${APACHE_DOCUMENT_ROOT:-/var/www}!g" /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf &&
         curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions &&
         chmod +x /usr/local/bin/install-php-extensions &&
         install-php-extensions ${PHP_EXTENSIONS:-mysqli pdo_mysql gd} &&
@@ -28,8 +28,8 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web.entrypoints=${PROJECT_ENTRYPOINTS:-web}
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web.rule=Host(${PROJECT_DOMAINS:-`web.localhost`})
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-php-apache.entrypoints=${PROJECT_ENTRYPOINTS:-web}
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-php-apache.rule=Host(${PROJECT_DOMAINS:-`web.localhost`})
     networks:
       - proxy
     expose:
