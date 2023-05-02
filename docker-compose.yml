@@ -17,13 +17,22 @@ services:
       - APACHE_DOCUMENT_ROOT=${APACHE_DOCUMENT_ROOT:-/var/www}
     command: >
       bash -c '
+        # Change default document root
         sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT:-/var/www}!g" /etc/apache2/sites-available/*.conf &&
         sed -ri -e "s!/var/www/!${APACHE_DOCUMENT_ROOT:-/var/www}!g" /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf &&
+        # Install php extensions
         curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions &&
         chmod +x /usr/local/bin/install-php-extensions &&
         install-php-extensions ${PHP_EXTENSIONS:-mysqli pdo_mysql gd} &&
-        a2enmod rewrite &&
-        apache2-foreground
+        # Install git
+        apt-get update && apt-get install -y git &&
+        # Install & set composer version
+        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
+        composer self-update --${COMPOSER_VERSION:-1} &&
+        # Set server name
+        echo "ServerName ${COMPOSE_PROJECT_NAME:-localhost}" >> /etc/apache2/apache2.conf &&
+        # Run server service
+        a2enmod rewrite && service apache2 restart && apache2-foreground
       '
     labels:
       - traefik.enable=true
