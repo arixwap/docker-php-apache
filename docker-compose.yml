@@ -5,9 +5,9 @@ networks:
     external: true
 
 services:
-  php-apache:
-    container_name: ${COMPOSE_PROJECT_NAME}-php-apache
-    image: php:${PHP_VERSION:-5.6}-apache
+  php:
+    container_name: ${COMPOSE_PROJECT_NAME}-php
+    image: php:${PHP_VERSION:-7.4}-apache
     restart: ${SERVICE_RESTART:-no}
     working_dir: /var/www
     volumes:
@@ -20,15 +20,21 @@ services:
         # Change default document root
         sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT:-/var/www}!g" /etc/apache2/sites-available/*.conf &&
         sed -ri -e "s!/var/www/!${APACHE_DOCUMENT_ROOT:-/var/www}!g" /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf &&
-        # Install php extensions
-        curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions &&
-        chmod +x /usr/local/bin/install-php-extensions &&
-        install-php-extensions ${PHP_EXTENSIONS:-mysqli pdo_mysql gd} &&
-        # Install git
-        apt-get update && apt-get install -y git &&
-        # Install & set composer version
-        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
-        composer self-update --${COMPOSER_VERSION:-1} &&
+
+        # # Install php extensions
+        # curl -sSLf -o /usr/local/bin/install-php-extensions https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions &&
+        # chmod +x /usr/local/bin/install-php-extensions &&
+        # install-php-extensions ${PHP_EXTENSIONS:-mysqli pdo_mysql gd} &&
+
+        docker-php-ext-install mysqli pdo_mysql &&
+
+        # # Install git
+        # apt-get update && apt-get install -y git &&
+
+        # # Install & set composer version
+        # curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer &&
+        # composer self-update --${COMPOSER_VERSION:-1} &&
+
         # Set server name
         echo "ServerName ${COMPOSE_PROJECT_NAME:-localhost}" >> /etc/apache2/apache2.conf &&
         # Run server service
@@ -37,8 +43,8 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-php-apache.entrypoints=${PROJECT_ENTRYPOINTS:-web}
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-php-apache.rule=Host(${PROJECT_DOMAINS:-`web.localhost`})
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-php.entrypoints=${PROJECT_ENTRYPOINTS:-web}
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-php.rule=Host(${PROJECT_DOMAINS:-`example.com`})
     networks:
       - proxy
     expose:
